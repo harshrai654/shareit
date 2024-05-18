@@ -87,34 +87,6 @@ func handleFile(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Length", fmt.Sprintf("%d", fileSize))
 			io.Copy(w, file)
 		}
-
-		// // Moving file cursor to given offset
-		// _, err = file.Seek(offset, io.SeekStart)
-
-		// if err != nil {
-		// 	http.Error(w, "Unable to reume download!", http.StatusInternalServerError)
-		// 	return
-		// }
-
-		// reader := bufio.NewReader(file)
-		// w.(http.Flusher).Flush()
-
-		// for {
-		// 	buf := make([]byte, 4096)
-		// 	n, err := reader.Read(buf)
-		// 	if err != nil && err != io.EOF {
-		// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 		return
-		// 	}
-		// 	if n == 0 {
-		// 		break
-		// 	}
-
-		// 	w.Write(buf[:n])
-		// 	w.(http.Flusher).Flush()
-
-		// 	offset += int64(n)
-		// }
 	} else {
 		http.Error(w, "Invalid filepath", http.StatusBadRequest)
 		return

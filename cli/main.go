@@ -10,8 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/yeqown/go-qrcode/v2"
-	"github.com/yeqown/go-qrcode/writer/terminal"
+	"github.com/skip2/go-qrcode"
 )
 
 const SERVER_FILE = "../server.pid"
@@ -84,21 +83,16 @@ func isServerUp(port string) bool {
 
 func generateQRCode(ip string, port string, path string) {
 	link := fmt.Sprintf("http://%s:%s/%s", ip, port, path)
-	qrc, err := qrcode.New(link)
+
+	qrCode, err := qrcode.New(link, qrcode.Medium)
 
 	if err != nil {
-		log.Printf("Unable to generate QR code for link: %s\n", link)
-		return
+		log.Fatalf("Error in generating qrcode: %s\n", err)
 	}
 
-	w := terminal.New()
+	fmt.Printf("\n%s\n", qrCode.ToSmallString(false))
 
-	if err := qrc.Save(w); err != nil {
-		log.Printf("Unable to write QR code to terminal!")
-		return
-	}
-
-	log.Printf("Link: %s\n", link)
+	fmt.Printf("Link: %s\n", link)
 }
 
 func getServerPort() (string, error) {
