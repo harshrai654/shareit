@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/url"
 	"os"
+	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/yeqown/go-qrcode/v2"
 	"github.com/yeqown/go-qrcode/writer/terminal"
-	"ttharsh.shareit/server/lib"
 )
 
 const SERVER_FILE = "../server.pid"
@@ -36,14 +38,14 @@ func main() {
 		if err != nil {
 			log.Println("Server not running!")
 			// Try starting server
-			go lib.StartServer(DEFAULT_SERVER_PORT, SERVER_FILE)
+			startServerProcess()
 			port = DEFAULT_SERVER_PORT
 			retriedConnection = true
 		} else {
 			log.Printf("Saved port: %s\n", port)
 			if !isServerUp(port) {
 				log.Println("Server connection failed, retrying...")
-				go lib.StartServer(port, SERVER_FILE)
+				startServerProcess()
 				retriedConnection = true
 			} else {
 				log.Printf("Server connection successful on port: %s\n", port)
@@ -58,8 +60,12 @@ func main() {
 			}
 		}
 
+		params := url.Values{}
+		params.Set("path", filePath)
+		encodedParams := params.Encode()
+
 		for _, ip := range ips {
-			generateQRCode(ip.String(), port, "ping")
+			generateQRCode(ip.String(), port, "?"+encodedParams)
 		}
 	} else {
 		log.Fatalf("Invlaid file path: %s\n", filePath)
@@ -68,7 +74,12 @@ func main() {
 
 func isServerUp(port string) bool {
 	_, err := net.Dial("tcp", "localhost:"+port)
-	return err == nil
+	if err != nil {
+		log.Printf("Server not up: %s\n", err)
+		return false
+	}
+
+	return true
 }
 
 func generateQRCode(ip string, port string, path string) {
@@ -153,7 +164,16 @@ func getLocalIP() []net.IP {
 			}
 		}
 	}
-
 	return ips
+}
 
+func startServerProcess() {
+	cmd := exec.Command("go", "run", "../server/main.go")
+	err := cmd.Start()
+
+	if err != nil {
+		log.Fatalf("Unable to start server process: %s\n", err)
+	}
+	log.Println("Server started")
+	time.Sleep(1 * time.Second)
 }
