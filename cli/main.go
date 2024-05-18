@@ -1,12 +1,15 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net"
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -17,12 +20,24 @@ const SERVER_FILE = "../server.pid"
 const DEFAULT_SERVER_PORT = "8965"
 
 func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("filepath argument missing!")
+
+	filepath := flag.String("filepath", "", "Absolute address of file")
+	help := flag.Bool("h", false, "Show help")
+
+	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		return
 	}
-	// Get path of file to share
-	filePath := os.Args[1]
-	if isValidPath(filePath) {
+
+	if *filepath == "" {
+		fmt.Fprintf(os.Stderr, "Error: -filepath flag is required\n")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	if isValidPath(*filepath) {
 		// Get Local IP
 		ips := getLocalIP()
 
@@ -60,14 +75,14 @@ func main() {
 		}
 
 		params := url.Values{}
-		params.Set("path", filePath)
+		params.Set("path", *filepath)
 		encodedParams := params.Encode()
 
 		for _, ip := range ips {
 			generateQRCode(ip.String(), port, "?"+encodedParams)
 		}
 	} else {
-		log.Fatalf("Invlaid file path: %s\n", filePath)
+		log.Fatalf("Invlaid file path: %s\n", *filepath)
 	}
 }
 
@@ -109,6 +124,11 @@ func getServerPort() (string, error) {
 }
 
 func isValidPath(filePath string) bool {
+	if !filepath.IsAbs(filePath) {
+		log.Println("Absolute path required!")
+		return false
+	}
+
 	stat, err := os.Stat(filePath)
 
 	if err != nil {
@@ -162,7 +182,17 @@ func getLocalIP() []net.IP {
 }
 
 func startServerProcess() {
-	cmd := exec.Command("go", "run", "../server/main.go")
+	serverExecPath := filepath.Join(".", fmt.Sprintf("shareit.server.%s", runtime.GOOS))
+
+	if runtime.GOOS == "windows" {
+		serverExecPath += ".exe"
+	}
+
+	cmd := exec.Command(serverExecPath)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
 	err := cmd.Start()
 
 	if err != nil {
