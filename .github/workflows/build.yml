@@ -1,0 +1,45 @@
+name: Build and Publish Executables
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.22"
+
+      - name: Change to CLI directory
+        run: |
+          cd cli/
+
+      - name: Build CLI executables
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ../builds/cli/shareit.cli.darwin main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../builds/cli/shareit.cli.linux main.go
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ../builds/cli/shareit.cli.windows.exe main.go
+
+      - name: Change to Server directory
+        run: |
+          cd ../server/
+
+      - name: Build CLI executables
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ../builds/server/shareit.server.darwin main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../builds/server/shareit.server.linux main.go
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ../builds/server/shareit.server.windows.exe main.go
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: builds/*
