@@ -8,8 +8,9 @@ You can download and install the latest CLI and Server executables using the fol
 
 - For Linux
 
-```sh
-sudo sh -c 'REPO="harshrai654/shareit"; DEST_DIR="/usr/local/bin"; ASSETS=("shareit.cli.linux" "shareit.server.linux"); for ASSET in "${ASSETS[@]}"; do URL=$(curl -s https://api.github.com/repos/$REPO/releases/tags/release-v-latest | jq -r ".assets[] | select(.name == \"$ASSET\") | .browser_download_url"); curl -L -o "$DEST_DIR/$ASSET" "$URL"; chmod +x "$DEST_DIR/$ASSET"; done'
+```bash
+sudo apt-get install -y jq
+sudo bash -c 'REPO="harshrai654/shareit"; DEST_DIR="/usr/local/bin"; ASSETS=("shareit.cli.linux" "shareit.server.linux"); for ASSET in "${ASSETS[@]}"; do URL=$(curl -s https://api.github.com/repos/$REPO/releases/tags/release-v-latest | jq -r ".assets[] | select(.name == \"$ASSET\") | .browser_download_url"); curl -L -o "$DEST_DIR/$ASSET" "$URL"; chmod +x "$DEST_DIR/$ASSET"; done'
 ```
 
 - For MacOS
