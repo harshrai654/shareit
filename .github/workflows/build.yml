@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "release-v*"
 
 jobs:
   build-and-publish:
@@ -24,7 +26,7 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../builds/cli/shareit.cli.linux main.go
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ../builds/cli/shareit.cli.windows.exe main.go
 
-      - name: Build CLI executables
+      - name: Build Server executables
         working-directory: server
         run: |
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ../builds/server/shareit.server.darwin main.go
@@ -37,3 +39,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: builds/*
+          tag_name: ${{ github.ref }}
+          generate_release_notes: true
