@@ -20,18 +20,31 @@ sudo sh -c 'REPO="harshrai654/shareit"; DEST_DIR="/usr/local/bin"; ASSETS=("shar
 
 - For Windows
 
-```cmd
-@echo off
-set REPO=harshrai654/shareit
-set DEST_DIR=%SystemDrive%\bin
-set ASSETS=shareit.cli.windows.exe,shareit.server.windows.exe
+## Download and Install CLI and Server Executables (PowerShell)
 
-for %%A in (%ASSETS%) do (
-    for /f "usebackq tokens=1,* delims=: " %%G in (`curl -s https://api.github.com/repos/%REPO%/releases/latest ^| findstr "browser_download_url.*%%~A"`) do (
-        curl -L -o "%DEST_DIR%\%%~A" "%%H"
-    )
-)
+You can download and install the latest CLI and Server executables using the following PowerShell command:
 
-echo Executables have been downloaded to %DEST_DIR%
+```powershell
+$repo = "harshrai654/shareit"
+$destDir = "$env:SystemDrive\bin"
+$assets = @("shareit.cli.windows.exe", "shareit.server.windows.exe")
 
-```
+if (-Not (Test-Path -Path $destDir)) {
+    New-Item -ItemType Directory -Path $destDir
+}
+
+$releaseInfo = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest"
+
+foreach ($asset in $assets) {
+    $url = $releaseInfo.assets | Where-Object { $_.name -eq $asset } | Select-Object -ExpandProperty browser_download_url
+    if ($url) {
+        $destPath = Join-Path -Path $destDir -ChildPath $asset
+        Invoke-WebRequest -Uri $url -OutFile $destPath
+        Write-Host "Downloaded $asset to $destPath"
+    } else {
+        Write-Host "Asset $asset not found in the latest release."
+    }
+}
+
+# Optionally, add $destDir to the PATH if it's not already there
+$envPath = [System.Environment]::G
