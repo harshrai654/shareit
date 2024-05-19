@@ -1,0 +1,55 @@
+name: Build and Publish Executables
+
+on:
+  push:
+    tags:
+      - "release-v-*"
+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag"
+        required: true
+        default: "release-v-latest"
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.22"
+
+      - name: Prepare build directories
+        run: |
+          mkdir -p builds/cli
+          mkdir -p builds/server
+
+      - name: Build CLI executables
+        working-directory: cli
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ../builds/cli/shareit.cli.darwin main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../builds/cli/shareit.cli.linux main.go
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ../builds/cli/shareit.cli.windows.exe main.go
+
+      - name: Build Server executables
+        working-directory: server
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ../builds/server/shareit.server.darwin main.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../builds/server/shareit.server.linux main.go
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o ../builds/server/shareit.server.windows.exe main.go
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
+            builds/cli/*
+            builds/server/*
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
