@@ -51,5 +51,5 @@ jobs:
           files: |
             builds/cli/*
             builds/server/*
-          tag_name: ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
           generate_release_notes: true
