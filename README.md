@@ -54,3 +54,9 @@ if ($path -notlike "*$destDir*") {
     Write-Host "$destDir is already in PATH"
 }
 ```
+
+## Usage
+To share a file to devices in the local network you will need the Absolute address of the file in the local machine. 
+```sh
+shareit.cli.<darwin|linux|windows>[.exe] -filepath "/path/to/file"
+```
