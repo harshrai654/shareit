@@ -16,7 +16,7 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
-const SERVER_FILE = "../server.pid"
+const SERVER_FILE = "./server.pid"
 const DEFAULT_SERVER_PORT = "8965"
 
 func main() {
