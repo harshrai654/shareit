@@ -1,22 +1,115 @@
 package main
 
 import (
+	"encoding/base32"
+	"encoding/gob"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"path/filepath"
+	"sync"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 const DEFAULT_SERVER_PORT = "8965"
-const SERVER_FILE = "./server.pid"
+const SERVER_FILE = "../server.pid"
+const UNIX_SOCKET_FILE = "../cli_server.sock"
+
+type filePathDetails struct {
+	Secret string
+	Otp    string
+}
+
+type socketPayload struct {
+	FileAuth filePathDetails
+	FilePath string
+}
+
+type FileVault struct {
+	mu      sync.RWMutex
+	fileMap map[string]filePathDetails
+}
+
+func (fv *FileVault) Read(key string) (filePathDetails, bool) {
+	fv.mu.RLock()
+	defer fv.mu.RUnlock()
+
+	value, ok := fv.fileMap[key]
+
+	return value, ok
+}
+
+func (fv *FileVault) Write(key string, value filePathDetails) {
+	fv.mu.Lock()
+	defer fv.mu.Unlock()
+
+	fv.fileMap[key] = value
+}
+
+func (*FileVault) New() *FileVault {
+	return &FileVault{
+		fileMap: make(map[string]filePathDetails),
+	}
+}
+
+var fv *FileVault
 
 func main() {
+	fv = fv.New()
+	go establishPipe()
 	StartServer(DEFAULT_SERVER_PORT, SERVER_FILE)
 }
 
 func handleFile(w http.ResponseWriter, r *http.Request) {
-	filepath := r.URL.Query().Get("path")
+	tokenString := r.URL.Query().Get("token")
+	log.Printf("[SERVER]: Recieved token: %s\n", tokenString)
+
+	// Parsing unverified token to get payload
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
+	if err != nil {
+		http.Error(w, "Invalid token!", http.StatusUnauthorized)
+		log.Printf("[SERVER]: %s\n", err)
+		return
+	}
+
+	// Extracting filepath from token payload
+	var filepath string
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		filepath = fmt.Sprintf("%s", claims["filepath"])
+	} else {
+		http.Error(w, "Invalid token!", http.StatusUnauthorized)
+		return
+	}
+
+	log.Printf("[SERVER]: filepath corresponding to given token: %s\n", filepath)
+
+	// Extracting JWT token secret for the corrsponding filepath from FileVault
+	fileDetails, ok := fv.Read(filepath)
+	if !ok {
+		http.Error(w, "Invalid token payload!", http.StatusUnauthorized)
+		return
+	}
+	secret, _ := base32.StdEncoding.DecodeString(fileDetails.Secret)
+
+	// Verifying token with secret
+	token, err = jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		return secret, nil
+	})
+	if err != nil {
+		http.Error(w, "Invalid token, unable to parse!", http.StatusUnauthorized)
+		log.Printf("[SERVER]: %s\n", err)
+		return
+	}
+
+	if !token.Valid {
+		http.Error(w, "Unauthorised token!", http.StatusUnauthorized)
+		return
+	}
+
 	rangeHeader := r.Header.Get("Range")
 
 	var start, end int64
@@ -26,6 +119,8 @@ func handleFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Checking if the file exists
+	// If yes then proceed with downloading
 	if isValidPath(filepath) {
 		file, err := os.Open(filepath)
 
@@ -93,6 +188,26 @@ func handleFile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Unix socket connection handler
+// Recieves a socket payload and writes it to FileVault
+func handleSocketConnection(conn net.Conn) {
+	defer conn.Close()
+
+	dec := gob.NewDecoder(conn)
+
+	var payload socketPayload
+	err := dec.Decode(&payload)
+
+	if err != nil {
+		log.Printf("[SERVER SOCKET]: Unable to decode socket: %s\n", err)
+	}
+
+	fv.Write(payload.FilePath, payload.FileAuth)
+
+	log.Printf("[SERVER SOCKET]: Payload received!")
+
+}
+
 func ping(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Pong!")
 }
@@ -103,7 +218,7 @@ func StartServer(port string, serverFilePath string) {
 	err := os.WriteFile(serverFilePath, []byte(port), 0644)
 
 	if err != nil {
-		log.Fatalf("Unable to write server details: %s\n", err)
+		log.Fatalf("[SERVER]: Unable to write server details: %s\n", err)
 	}
 
 	log.Printf("Server started on port: %s\n", port)
@@ -115,15 +230,42 @@ func StartServer(port string, serverFilePath string) {
 }
 
 func isValidPath(filePath string) bool {
-	stat, err := os.Stat(filePath)
+	_, err := os.Stat(filePath)
 
 	if err != nil {
 		return false
 	}
 
-	log.Println("File Stats: ")
-	log.Printf("File Name: %s\n", stat.Name())
-	log.Printf("File Size: %d KB\n\n", stat.Size()/1024)
-
 	return true
+}
+
+func establishPipe() {
+	// Establish unix domain socket
+	sockAddr, err := filepath.Abs(UNIX_SOCKET_FILE)
+
+	if err != nil {
+		log.Fatalf("[SERVER]: Unable to resolve socket file address: %s\n", err)
+	}
+
+	// Remove any existing socket file with same name
+	_ = os.Remove(sockAddr)
+
+	log.Printf("[SERVER]: Connecting to socket @: %s\n", sockAddr)
+
+	listener, err := net.Listen("unix", sockAddr)
+
+	if err != nil {
+		log.Fatalf("[SERVER]: Error creating socket listener")
+	}
+
+	defer listener.Close()
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Fatalf("[SERVER]: Error accepting unix socket connection: %s\n", err)
+		}
+
+		go handleSocketConnection(conn)
+	}
 }

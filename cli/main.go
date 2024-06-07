@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base32"
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"log"
@@ -13,15 +16,28 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/skip2/go-qrcode"
 )
 
-const SERVER_FILE = "./server.pid"
+type filePathDetails struct {
+	Secret string
+	Otp    string
+}
+
+type socketPayload struct {
+	FileAuth filePathDetails
+	FilePath string
+}
+
+const SERVER_FILE = "../server.pid"
+const UNIX_SOCKET_FILE = "../cli_server.sock"
 const DEFAULT_SERVER_PORT = "8965"
+const SECRET_LENGTH = 32
 
 func main() {
-
 	filepath := flag.String("filepath", "", "Absolute address of file")
+	otp := flag.String("otp", "", "One time password for file sharing")
 	help := flag.Bool("h", false, "Show help")
 
 	flag.Parse()
@@ -38,25 +54,29 @@ func main() {
 	}
 
 	if isValidPath(*filepath) {
-		// Get Local IP
+		// Get Local IP from network interfaces
 		ips := getLocalIP()
 
 		if len(ips) == 0 {
 			log.Fatalf("No LAN detected!")
 		}
 
-		// Get port for the server
+		// Get port for the server from server.pid
 		port, err := getServerPort()
 		retriedConnection := false
 
 		if err != nil {
 			log.Println("Server not running!")
-			// Try starting server
+
+			// Start server process in case no saved port is found
 			startServerProcess()
 			port = DEFAULT_SERVER_PORT
 			retriedConnection = true
 		} else {
 			log.Printf("Saved port: %s\n", port)
+
+			// Try starting server process in case tcp dialup to server fails
+			// on saved port
 			if !isServerUp(port) {
 				log.Println("Server connection failed, retrying...")
 				startServerProcess()
@@ -74,8 +94,40 @@ func main() {
 			}
 		}
 
+		// Generate random token secret, secret is base32 encoded string
+		// which will also be shared with server porcess via unix socket
+		secretString, err := generateFilePathSecret(SECRET_LENGTH)
+		if err != nil {
+			log.Fatalln("[CLI]: Unable to generate token secret!!")
+		}
+
+		// Generate token with filepath as payload
+		t := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"filepath": *filepath,
+		})
+
+		// Converting secret to original bytes and signing token with it
+		secret, _ := base32.StdEncoding.DecodeString(secretString)
+		token, err := t.SignedString(secret)
+		if err != nil {
+			log.Fatalf("[CLI]: Unable to generate token: %s\n", err)
+		}
+
+		// Creating unix socket payload in common acceptable format i.e. socketPayload
+		payload := socketPayload{
+			FileAuth: filePathDetails{
+				Otp:    *otp,
+				Secret: secretString,
+			},
+			FilePath: *filepath,
+		}
+
+		// Send secret and password to server, along with filepath
+		sendFilePayload(payload)
+
+		// LINK generation
 		params := url.Values{}
-		params.Set("path", *filepath)
+		params.Set("token", token)
 		encodedParams := params.Encode()
 
 		for _, ip := range ips {
@@ -86,6 +138,7 @@ func main() {
 	}
 }
 
+// TCP dialup to server process to check server's running status
 func isServerUp(port string) bool {
 	_, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
@@ -95,7 +148,6 @@ func isServerUp(port string) bool {
 
 	return true
 }
-
 func generateQRCode(ip string, port string, path string) {
 	link := fmt.Sprintf("http://%s:%s/%s", ip, port, path)
 
@@ -181,6 +233,9 @@ func getLocalIP() []net.IP {
 	return ips
 }
 
+/*
+Runs server executable file as a separate process
+*/
 func startServerProcess() {
 	serverExecPath := filepath.Join(".", fmt.Sprintf("shareit.server.%s", runtime.GOOS))
 
@@ -200,4 +255,42 @@ func startServerProcess() {
 	}
 	log.Println("Server started")
 	time.Sleep(1 * time.Second)
+}
+
+func generateFilePathSecret(length int) (string, error) {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+
+	return base32.StdEncoding.EncodeToString(bytes), nil
+}
+
+func sendFilePayload(payload socketPayload) {
+	absSocketAddres, err := filepath.Abs(UNIX_SOCKET_FILE)
+
+	if err != nil {
+		log.Fatalf("[CLI]: Unable to resolve socket file address: %s\n", err)
+	}
+
+	addr, err := net.ResolveUnixAddr("unix", absSocketAddres)
+
+	if err != nil {
+		log.Fatalf("[CLI]: Unable to resolve unix address: %s\n", err)
+	}
+
+	conn, err := net.DialUnix("unix", nil, addr)
+
+	if err != nil {
+		log.Fatalf("[CLI]: Unable to connect to socket: %s\n", err)
+	}
+
+	// Encoding struct payload to socket
+	enc := gob.NewEncoder(conn)
+
+	err = enc.Encode(payload)
+
+	if err != nil {
+		log.Fatalf("[CLI]: Unable to encode payload to socket: %s\n", err)
+	}
 }

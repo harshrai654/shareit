@@ -2,3 +2,4 @@
 builds
 test_files
 server.pid
+cli_server.sock
