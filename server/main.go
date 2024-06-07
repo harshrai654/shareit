@@ -10,14 +10,17 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const DEFAULT_SERVER_PORT = "8965"
-const SERVER_FILE = "../server.pid"
-const UNIX_SOCKET_FILE = "../cli_server.sock"
+const DEFAULT_SERVER_PORT = "8966"
+
+var RUNTIME_DIR = getRuntimeDirectory()
+var SERVER_FILE = filepath.Join(RUNTIME_DIR, "server.pid")
+var UNIX_SOCKET_FILE = filepath.Join(RUNTIME_DIR, "server.sock")
 
 type filePathDetails struct {
 	Secret string
@@ -48,6 +51,15 @@ func (fv *FileVault) Write(key string, value filePathDetails) {
 	defer fv.mu.Unlock()
 
 	fv.fileMap[key] = value
+}
+
+// According to OS returns the runtime directory
+func getRuntimeDirectory() string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(os.Getenv("APPDATA"), "shareit")
+	} else {
+		return filepath.Join(os.Getenv("HOME"), ".shareit")
+	}
 }
 
 func (*FileVault) New() *FileVault {

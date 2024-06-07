@@ -30,10 +30,21 @@ type socketPayload struct {
 	FilePath string
 }
 
-const SERVER_FILE = "../server.pid"
-const UNIX_SOCKET_FILE = "../cli_server.sock"
-const DEFAULT_SERVER_PORT = "8965"
+const DEFAULT_SERVER_PORT = "8966"
 const SECRET_LENGTH = 32
+
+var RUNTIME_DIR = getRuntimeDirectory()
+var SERVER_FILE = filepath.Join(RUNTIME_DIR, "server.pid")
+var UNIX_SOCKET_FILE = filepath.Join(RUNTIME_DIR, "server.sock")
+var SERVER_LOG_FILE_PATH = filepath.Join(RUNTIME_DIR, "server.log")
+
+func getRuntimeDirectory() string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(os.Getenv("APPDATA"), "shareit")
+	} else {
+		return filepath.Join(os.Getenv("HOME"), ".shareit")
+	}
+}
 
 func main() {
 	filepath := flag.String("filepath", "", "Absolute address of file")
@@ -243,12 +254,21 @@ func startServerProcess() {
 		serverExecPath += ".exe"
 	}
 
-	cmd := exec.Command(serverExecPath)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	log.Printf("Starting server process: %s\n", serverExecPath)
 
-	err := cmd.Start()
+	// Create/Open server log file in append mode from SERVER_LOG_FILE_PATH
+	file, err := os.OpenFile(SERVER_LOG_FILE_PATH, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+
+	if err != nil {
+		log.Fatalf("Unable to create/open server log file: %s\n", err)
+	}
+
+	cmd := exec.Command(serverExecPath)
+	cmd.Stdin = file
+	cmd.Stdout = file
+	cmd.Stderr = file
+
+	err = cmd.Start()
 
 	if err != nil {
 		log.Fatalf("Unable to start server process: %s\n", err)
