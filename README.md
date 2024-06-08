@@ -54,19 +54,37 @@ There are two main components in ShareIT:
 
 You can download and install the latest CLI and Server executables by running shell script from the command line.
 
-### For Linux And MacOS
+- ### For Linux And MacOS
 
-```sh
-curl -fsSL https://raw.githubusercontent.com/harshrai654/shareit/main/scripts/install.sh | sh
-```
+  ```sh
+  curl -fsSL https://raw.githubusercontent.com/harshrai654/shareit/main/scripts/install.sh | sh
+  ```
 
-### For Windows (Powershell)
+- ### For Windows (Powershell)
 
-Run the powershell script with admin privileges.
+  Run the powershell script with admin privileges.
 
-```powershell
-curl -fsSL https://raw.githubusercontent.com/harshrai654/shareit/main/scripts/install.ps1 | iex
-```
+  ```powershell
+  curl -fsSL https://raw.githubusercontent.com/harshrai654/shareit/main/scripts/install.ps1 | iex
+  ```
+
+## Uninstallation Instructions
+
+To uninstall the CLI and Server executables, run the following shell script from the command line.
+
+- ### For Linux And MacOS
+
+  ```sh
+  curl -fsSL https://raw.githubusercontent.com/harshrai654/shareit/main/scripts/uninstall.sh | sh
+  ```
+
+- ### For Windows (Powershell)
+
+  Run the powershell script with admin privileges.
+
+  ```powershell
+  curl -fsSL https://raw.githubusercontent.com/harshrai654/shareit/main/scripts/uninstall.ps1 | iex
+  ```
 
 ## Future Features
 
