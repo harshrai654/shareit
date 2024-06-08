@@ -65,7 +65,7 @@ You can download and install the latest CLI and Server executables by running sh
   Run the powershell script with admin privileges.
 
   ```powershell
-  curl -fsSL https://raw.githubusercontent.com/harshrai654/shareit/main/scripts/install.ps1 | iex
+  Invoke-RestMethod -Uri "https://raw.githubusercontent.com/harshrai654/shareit/main/scripts/install.ps1" | Invoke-Expression
   ```
 
 ## Uninstallation Instructions
@@ -83,7 +83,7 @@ To uninstall the CLI and Server executables, run the following shell script from
   Run the powershell script with admin privileges.
 
   ```powershell
-  curl -fsSL https://raw.githubusercontent.com/harshrai654/shareit/main/scripts/uninstall.ps1 | iex
+  Invoke-RestMethod -Uri "https://raw.githubusercontent.com/harshrai654/shareit/main/scripts/uninstall.ps1" | Invoke-Expression
   ```
 
 ## Future Features
