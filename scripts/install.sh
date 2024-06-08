@@ -14,7 +14,7 @@ GITHUB_REPO="harshrai654/shareit"
 CLI_EXECUTABLE="shareit.cli.linux"
 SERVER_EXECUTABLE="shareit.server.linux"
 INSTALL_DIR="/usr/local/bin"
-RUNTIME_DIR="$HOME/.local/share/shareit"
+RUNTIME_DIR="$HOME/.shareit/"
 
 if [ "${OS}" == "Mac" ]; then
     RUNTIME_DIR="$HOME/Library/Application Support/shareit"
