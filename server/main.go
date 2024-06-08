@@ -56,7 +56,7 @@ func (fv *FileVault) Write(key string, value filePathDetails) {
 // According to OS returns the runtime directory
 func getRuntimeDirectory() string {
 	if runtime.GOOS == "windows" {
-		return filepath.Join(os.Getenv("APPDATA"), "shareit")
+		return filepath.Join(os.Getenv("LOCALAPPDATA"), "ShareIT")
 	}
 
 	if runtime.GOOS == "darwin" {

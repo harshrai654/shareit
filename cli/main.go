@@ -40,7 +40,7 @@ var SERVER_LOG_FILE_PATH = filepath.Join(RUNTIME_DIR, "server.log")
 
 func getRuntimeDirectory() string {
 	if runtime.GOOS == "windows" {
-		return filepath.Join(os.Getenv("APPDATA"), "shareit")
+		return filepath.Join(os.Getenv("LOCALAPPDATA"), "ShareIT")
 	}
 
 	if runtime.GOOS == "darwin" {

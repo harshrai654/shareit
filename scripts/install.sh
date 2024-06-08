@@ -41,3 +41,5 @@ sudo curl -L -o "$INSTALL_DIR/$SERVER_EXECUTABLE" "$SERVER_URL"
 # Set execute permissions
 sudo chmod +x "$INSTALL_DIR/$CLI_EXECUTABLE"
 sudo chmod +x "$INSTALL_DIR/$SERVER_EXECUTABLE"
+
+echo "Installation complete."

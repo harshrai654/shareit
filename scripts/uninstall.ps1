@@ -1,8 +1,8 @@
 Write-Host "Uninstalling ShareIT for Windows..."
 
 # Variables
-$CLI_EXECUTABLE = "shareit.cli.exe"
-$SERVER_EXECUTABLE = "shareit.server.exe"
+$CLI_EXECUTABLE = "shareit.cli.windows.exe"
+$SERVER_EXECUTABLE = "shareit.server.windows.exe"
 $INSTALL_DIR = "$env:ProgramFiles\ShareIT"
 $RUNTIME_DIR = "$env:LOCALAPPDATA\ShareIT"
 
@@ -32,13 +32,21 @@ if (Is-ProcessRunning -ProcessName "shareit.server") {
     }
 }
 
-# Remove installed files
+# Remove installed files and directories
 Write-Host "Removing installed files..."
 Remove-Item -Path "$INSTALL_DIR\$CLI_EXECUTABLE" -Force
 Remove-Item -Path "$INSTALL_DIR\$SERVER_EXECUTABLE" -Force
+Remove-Item -Path "$INSTALL_DIR" -Recurse -Force
+
 
 # Remove runtime directory
 Write-Host "Removing runtime directory..."
 Remove-Item -Path $RUNTIME_DIR -Recurse -Force
+
+# Remove INSTALL_DIR from PATH
+Write-Host "Removing $INSTALL_DIR from PATH..."
+$oldPath = [System.Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::Machine)
+$newPath = ($oldPath -split ';') -notmatch [Regex]::Escape($INSTALL_DIR) -join ';'
+[System.Environment]::SetEnvironmentVariable("Path", $newPath, [System.EnvironmentVariableTarget]::Machine)
 
 Write-Host "Uninstallation complete."
