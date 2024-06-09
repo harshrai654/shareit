@@ -12,11 +12,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 const DEFAULT_SERVER_PORT = "8966"
+const INACTIVE_TIMEOUT = 5 * 60
 
 var RUNTIME_DIR = getRuntimeDirectory()
 var SERVER_FILE = filepath.Join(RUNTIME_DIR, "server.pid")
@@ -36,6 +39,8 @@ type FileVault struct {
 	mu      sync.RWMutex
 	fileMap map[string]filePathDetails
 }
+
+var lastActiveTimestamp = time.Now().Unix()
 
 func (fv *FileVault) Read(key string) (filePathDetails, bool) {
 	fv.mu.RLock()
@@ -59,10 +64,6 @@ func getRuntimeDirectory() string {
 		return filepath.Join(os.Getenv("LOCALAPPDATA"), "ShareIT")
 	}
 
-	if runtime.GOOS == "darwin" {
-		return filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "shareit")
-	}
-
 	return filepath.Join(os.Getenv("HOME"), ".shareit")
 }
 
@@ -77,10 +78,14 @@ var fv *FileVault
 func main() {
 	fv = fv.New()
 	go establishPipe()
+	go activityMonitor()
 	StartServer(DEFAULT_SERVER_PORT, SERVER_FILE)
 }
 
 func handleFile(w http.ResponseWriter, r *http.Request) {
+	//Updating last active timestamp
+	updateLastActiveTimestamp()
+
 	tokenString := r.URL.Query().Get("token")
 	log.Printf("[SERVER]: Recieved token: %s\n", tokenString)
 
@@ -247,12 +252,7 @@ func StartServer(port string, serverFilePath string) {
 
 func isValidPath(filePath string) bool {
 	_, err := os.Stat(filePath)
-
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 func establishPipe() {
@@ -284,4 +284,23 @@ func establishPipe() {
 
 		go handleSocketConnection(conn)
 	}
+}
+
+func activityMonitor() {
+	for {
+		time.Sleep(INACTIVE_TIMEOUT * time.Second)
+
+		log.Printf("[ACTIVITY_MONITOR]: Last active timestamp: %d\n", lastActiveTimestamp)
+
+		// Check if server is inactive
+		if time.Now().Unix()-lastActiveTimestamp >= INACTIVE_TIMEOUT {
+			log.Print("Server inactive, shutting down...")
+			os.Exit(0)
+		}
+	}
+}
+
+func updateLastActiveTimestamp() {
+	atomic.StoreInt64(&lastActiveTimestamp, time.Now().Unix())
+	log.Printf("Last active timestamp updated: %d\n", lastActiveTimestamp)
 }

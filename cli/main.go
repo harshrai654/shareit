@@ -43,10 +43,6 @@ func getRuntimeDirectory() string {
 		return filepath.Join(os.Getenv("LOCALAPPDATA"), "ShareIT")
 	}
 
-	if runtime.GOOS == "darwin" {
-		return filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "shareit")
-	}
-
 	return filepath.Join(os.Getenv("HOME"), ".shareit")
 }
 

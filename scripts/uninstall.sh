@@ -17,7 +17,6 @@ INSTALL_DIR="/usr/local/bin"
 RUNTIME_DIR="$HOME/.shareit/"
 
 if [ "${OS}" == "Mac" ]; then
-    RUNTIME_DIR="$HOME/Library/Application Support/shareit"
     CLI_EXECUTABLE="shareit.cli.darwin"
     SERVER_EXECUTABLE="shareit.server.darwin"
 fi
