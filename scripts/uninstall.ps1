@@ -49,4 +49,28 @@ $oldPath = [System.Environment]::GetEnvironmentVariable("Path", [System.Environm
 $newPath = ($oldPath -split ';') -notmatch [Regex]::Escape($INSTALL_DIR) -join ';'
 [System.Environment]::SetEnvironmentVariable("Path", $newPath, [System.EnvironmentVariableTarget]::Machine)
 
+# Define variables
+$contextMenuName = "Share File with ShareIT"  # The name that appears in the context menu
+
+# Registry key paths to delete
+$shellKeyPath = "HKEY_CLASSES_ROOT\*\shell\$contextMenuName"
+$commandKeyPath = "$shellKeyPath\command"
+
+# Debugging output
+Write-Host "Removing registry entry at $commandKeyPath"
+Write-Host "Removing registry entry at $shellKeyPath"
+
+try {
+    # Remove the command key
+    reg.exe DELETE "$commandKeyPath" /f | Out-Null
+
+    # Remove the shell key
+    reg.exe DELETE "$shellKeyPath" /f | Out-Null
+
+    Write-Host "Context menu item '$contextMenuName' removed successfully."
+} catch {
+    Write-Error "Failed to remove registry entry: $_"
+}
+
+
 Write-Host "Uninstallation complete."

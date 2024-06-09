@@ -33,4 +33,33 @@ if ($oldPath -notlike "*$INSTALL_DIR*") {
     [System.Environment]::SetEnvironmentVariable("Path", $newPath, [System.EnvironmentVariableTarget]::Machine)
 }
 
+Write-Host "Adding Context menu action for ShareIT..."
+
+# Add context menu action to Windows Explorer to invoke ShareIT on a particular file to be shared
+# Define variables
+$executablePath = "$INSTALL_DIR\shareit.cli.windows.exe"  # Replace with the actual path to your Go executable
+$contextMenuName = "Share File with ShareIT"  # The name that will appear in the context menu
+
+# Commad to run powershell session and invoke go executable with filepath parameter
+# Go binary excution command "shareit.cli.windows.exe -filepath <filepath>"
+$command = "powershell -Command `"& { & '$executablePath' -filepath `"%1`"; pause }`""
+
+# Debugging output
+Write-Host "Creating registry entry at Registry::HKEY_CLASSES_ROOT\*\shell\$contextMenuName"
+Write-Host "Creating registry entry at Registry::HKEY_CLASSES_ROOT\*\shell\$contextMenuName\command"
+Write-Host "Command: $command"
+
+try {
+    # Create the shell key
+    & reg.exe ADD "HKEY_CLASSES_ROOT\*\shell\$contextMenuName" /ve /d "$contextMenuName" /f | Out-Null
+
+    # Set the default value for the shell key
+    & reg.exe ADD "HKEY_CLASSES_ROOT\*\shell\$contextMenuName\command" /ve /d "$command" /f | Out-Null
+
+    Write-Host "Context menu item '$contextMenuName' added successfully."
+} catch {
+    Write-Error "Failed to create registry entry: $_"
+}
+
+
 Write-Host "Installation complete. Please restart your terminal or log off and log back in for PATH changes to take effect."
