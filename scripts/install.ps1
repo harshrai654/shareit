@@ -42,7 +42,7 @@ $contextMenuName = "Share File with ShareIT"  # The name that will appear in the
 
 # Commad to run powershell session and invoke go executable with filepath parameter
 # Go binary excution command "shareit.cli.windows.exe -filepath <filepath>"
-$command = "powershell -Command `"& { & '$executablePath' -filepath `"%1`"; pause }`""
+$command = "pwsh -Command `"& { & '$executablePath' -filepath '%1'; pause }`""
 
 # Debugging output
 Write-Host "Creating registry entry at Registry::HKEY_CLASSES_ROOT\*\shell\$contextMenuName"
