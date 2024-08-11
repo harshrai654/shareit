@@ -90,4 +90,5 @@ To uninstall the CLI and Server executables, run the following shell script from
 
 - [X] Context Menu Action : Add a context menu action to share files. (Only availabel for windows)
 - [ ] Basic Authentication: Share a user-entered password along with the JWT secret for basic authentication before file download.
+- [ ] HTTPS support for encrypted file sharing (Need to generrate TLS certificate locally)
 - [X] Auto Termination: Automatically terminate the server process after a period of idle behavior to prevent resource leaks.
