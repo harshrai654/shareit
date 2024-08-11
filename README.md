@@ -88,6 +88,6 @@ To uninstall the CLI and Server executables, run the following shell script from
 
 ## Future Features
 
-- [ ] Context Menu Action : Add a context menu action to share files.
+- [X] Context Menu Action : Add a context menu action to share files. (Only availabel for windows)
 - [ ] Basic Authentication: Share a user-entered password along with the JWT secret for basic authentication before file download.
-- [ ] Auto Termination: Automatically terminate the server process after a period of idle behavior to prevent resource leaks.
+- [X] Auto Termination: Automatically terminate the server process after a period of idle behavior to prevent resource leaks.
